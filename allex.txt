@@ -1,0 +1,606 @@
+/////
+
+
+EXP2...(tokenization/count no.of characters)
+
+#include <stdio.h> #include <ctype.h>int main() {
+    char exp[100];
+    int i;
+    int var_count = 0, op_count = 0;
+ 
+    printf("Enter your expression: ");
+    scanf("%s", exp);
+ 
+    for (i = 0; exp[i] != '\0'; i++) {
+        if (isalpha(exp[i])) {
+            var_count++;
+        }
+    }
+ 
+    for (i = 0; exp[i] != '\0'; i++) {
+        if (exp[i] == '+' || exp[i] == '-' || exp[i] == '*' ||
+            exp[i] == '/' || exp[i] == '%' || exp[i] == '=') {
+            op_count++;
+        }
+    }
+ 
+    printf("\nTotal Variables: %d", var_count);
+    printf("\nTotal Operators: %d\n", op_count);
+ 
+    return 0;
+}
+
+//////
+exp3....pass 1
+
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+ 
+struct Symbol {
+    char name[10];
+    int address;
+};
+ 
+struct Literal {
+    char literal[10];
+    int address;
+};
+ 
+int main() {
+    FILE *fp;
+    char line[100], w1[20], w2[20], w3[20];
+ 
+    struct Symbol symtab[10];
+    struct Literal littab[10];
+    int symcount = 0, litcount = 0;
+ 
+    int pooltab[10], poolcount = 0;
+    int LC = 0;
+ 
+    fp = fopen("code.txt", "r");
+    if (!fp) {
+        printf("Cannot open file\n");
+        return 1;
+    }
+ 
+    // First literal pool starts at index 0
+    pooltab[poolcount++] = 0;
+ 
+    while (fgets(line, sizeof(line), fp)) {
+        sscanf(line, "%s %s %s", w1, w2, w3);
+ 
+        if (strcmp(w1, "START") == 0) {
+            LC = atoi(w2);
+        }
+        else if (strcmp(w1, "LTORG") == 0) {
+            for (int i = pooltab[poolcount - 1]; i < litcount; i++) {
+                littab[i].address = LC++;
+            }
+            pooltab[poolcount++] = litcount;
+        }
+        else if (strcmp(w1, "END") == 0) {
+            for (int i = pooltab[poolcount - 1]; i < litcount; i++) {
+                littab[i].address = LC++;
+            }
+            break;
+        }
+        else if (strcmp(w2, "DS") == 0 || strcmp(w2, "DC") == 0) {
+            int found = 0;
+            for (int i = 0; i < symcount; i++) {
+                if (strcmp(symtab[i].name, w1) == 0) {
+                    symtab[i].address = LC;
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) {
+                strcpy(symtab[symcount].name, w1);
+                symtab[symcount].address = LC;
+                symcount++;
+            }
+            if (strcmp(w2, "DS") == 0)
+                LC += atoi(w3);
+            else
+                LC++;
+        }
+        else {
+            // Handle symbol operands
+            if (strcmp(w2, "X") == 0 || strcmp(w2, "Y") == 0 || strcmp(w2, "Z") == 0) {
+                int found = 0;
+                for (int i = 0; i < symcount; i++) {
+                    if (strcmp(symtab[i].name, w2) == 0) {
+                        found = 1;
+                        break;
+                    }
+                }
+                if (!found) {
+                    strcpy(symtab[symcount].name, w2);
+                    symtab[symcount].address = -1;  // Undefined address initially
+                    symcount++;
+                }
+            }
+ 
+            // Handle literals
+            if (strchr(line, '=')) {
+                strcpy(littab[litcount].literal, strchr(line, '='));
+                littab[litcount].address = -1;
+                litcount++;
+            }
+ 
+            LC++;
+        }
+    }
+ 
+    fclose(fp);
+ 
+    // Print Symbol Table
+    printf("\n--- SYMBOL TABLE ---\n");
+    printf("Symbol\tAddress\n");
+    for (int i = 0; i < symcount; i++) {
+        if (symtab[i].address != -1)
+            printf("%-6s\t%d\n", symtab[i].name, symtab[i].address);
+    }
+ 
+    // Print Literal Table
+    printf("\n--- LITERAL TABLE ---\n");
+    printf("Literal\tAddress\n");
+    for (int i = 0; i < litcount; i++) {
+        printf("%-7s\t%d\n", littab[i].literal, littab[i].address);
+    }
+ 
+    // Print Pool Table
+    printf("\n--- POOL TABLE ---\n");
+    printf("Pool#\tIndex\n");
+    for (int i = 0; i < poolcount; i++) {
+        printf("%d\t%d\n", i + 1, pooltab[i] + 1);
+    }
+ 
+    return 0;
+}
+
+/////
+
+
+exp4... pass 2
+
+
+#include <stdio.h>
+#include <string.h>
+
+// Same structures as Pass 1
+struct Symbol {
+    char name[10];
+    int address;
+};
+
+struct Literal {
+    char literal[10];
+    int address;
+};
+
+int main() {
+    FILE *fp;
+    char line[100], opcode[10], operand[10];
+
+    // Sample SYMTAB (you can copy from Pass 1 output)
+    struct Symbol symtab[] = {
+        {"X", 205},
+        {"Y", 210},
+        {"Z", 215}
+    };
+    int symcount = 3;
+
+    // Sample LITTAB
+    struct Literal littab[] = {
+        {"=5", 300},
+        {"=1", 301}
+    };
+    int litcount = 2;
+
+    fp = fopen("intermediate.txt", "r");
+    if (!fp) {
+        printf("File not found!\n");
+        return 1;
+    }
+
+    printf("\n--- MACHINE CODE ---\n");
+
+    while (fgets(line, sizeof(line), fp)) {
+
+        sscanf(line, "%s %s", opcode, operand);
+
+        // STOP condition
+        if (strcmp(opcode, "END") == 0)
+            break;
+
+        printf("%s ", opcode);
+
+        // 🔹 Check SYMBOL
+        int found = 0;
+        for (int i = 0; i < symcount; i++) {
+            if (strcmp(operand, symtab[i].name) == 0) {
+                printf("%d\n", symtab[i].address);
+                found = 1;
+                break;
+            }
+        }
+
+        // 🔹 Check LITERAL
+        if (!found) {
+            for (int i = 0; i < litcount; i++) {
+                if (strcmp(operand, littab[i].literal) == 0) {
+                    printf("%d\n", littab[i].address);
+                    found = 1;
+                    break;
+                }
+            }
+        }
+
+        // 🔹 If constant or no match
+        if (!found) {
+            printf("%s\n", operand);
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
+////////
+exp 5...MNT
+
+#include <stdio.h>
+#include <string.h>
+
+struct MNT {
+    int index;
+    char name[20];
+};
+
+int main() {
+    FILE *fp;
+    char line[100], word1[20], word2[20];
+
+    struct MNT mnt[10];
+    int mntc = 0;   // MNT count
+    int index = 0;
+
+    fp = fopen("macro.txt", "r");
+    if (!fp) {
+        printf("File not found!\n");
+        return 1;
+    }
+
+    while (fgets(line, sizeof(line), fp)) {
+
+        sscanf(line, "%s %s", word1, word2);
+
+        // Check for MACRO start
+        if (strcmp(word1, "MACRO") == 0) {
+
+            // Read next line → macro name line
+            fgets(line, sizeof(line), fp);
+            sscanf(line, "%s", word1);  // macro name
+
+            // Store in MNT
+            mnt[mntc].index = index++;
+            strcpy(mnt[mntc].name, word1);
+            mntc++;
+        }
+    }
+
+    fclose(fp);
+
+    // Print MNT
+    printf("\n--- MNT TABLE ---\n");
+    printf("Index\tName\n");
+
+    for (int i = 0; i < mntc; i++) {
+        printf("%d\t%s\n", mnt[i].index, mnt[i].name);
+    }
+
+    return 0;
+}
+
+/////
+exp 6....MDT
+
+
+#include <stdio.h>
+#include <string.h>
+
+struct MDT {
+    int index;
+    char line[100];
+};
+
+int main() {
+    FILE *fp;
+    char line[100];
+
+    struct MDT mdt[50];
+    int mdtc = 0;   // MDT count
+    int index = 0;
+
+    int insideMacro = 0;
+
+    fp = fopen("macro.txt", "r");
+    if (!fp) {
+        printf("File not found!\n");
+        return 1;
+    }
+
+    while (fgets(line, sizeof(line), fp)) {
+
+        // Remove newline for clean printing
+        line[strcspn(line, "\n")] = 0;
+
+        // Start of macro
+        if (strcmp(line, "MACRO") == 0) {
+            insideMacro = 1;
+            continue;
+        }
+
+        // End of macro
+        if (strcmp(line, "MEND") == 0) {
+            insideMacro = 0;
+            continue;
+        }
+
+        // Store lines inside macro
+        if (insideMacro) {
+            mdt[mdtc].index = index++;
+            strcpy(mdt[mdtc].line, line);
+            mdtc++;
+        }
+    }
+
+    fclose(fp);
+
+    // Print MDT
+    printf("\n--- MDT TABLE ---\n");
+    printf("Index\tDefinition\n");
+
+    for (int i = 0; i < mdtc; i++) {
+        printf("%d\t%s\n", mdt[i].index, mdt[i].line);
+    }
+
+    return 0;
+}
+
+
+///////
+
+exp 7...first n follow 
+
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX 10
+
+int n;
+char prod[MAX][MAX];
+char first[MAX], follow[MAX];
+int fIndex, foIndex;
+
+// Check non-terminal
+int isNT(char c) {
+    return (c >= 'A' && c <= 'Z');
+}
+
+// Add to FIRST
+void addFirst(char c) {
+    for (int i = 0; i < fIndex; i++)
+        if (first[i] == c) return;
+    first[fIndex++] = c;
+}
+
+// Add to FOLLOW
+void addFollow(char c) {
+    for (int i = 0; i < foIndex; i++)
+        if (follow[i] == c) return;
+    follow[foIndex++] = c;
+}
+
+// FIRST
+void FIRST(char c) {
+    if (!isNT(c)) {
+        addFirst(c);
+        return;
+    }
+
+    for (int i = 0; i < n; i++) {
+        if (prod[i][0] == c) {
+            char next = prod[i][2];
+
+            if (next == '$')
+                addFirst('$');
+            else if (!isNT(next))
+                addFirst(next);
+            else
+                FIRST(next);
+        }
+    }
+}
+
+// FOLLOW
+void FOLLOW(char c) {
+
+    if (c == prod[0][0])  // start symbol
+        addFollow('$');
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 2; prod[i][j] != '\0'; j++) {
+
+            if (prod[i][j] == c) {
+                char next = prod[i][j + 1];
+
+                if (next != '\0' && !isNT(next))
+                    addFollow(next);
+
+                else if (isNT(next)) {
+                    FIRST(next);   // use FIRST
+                    for (int k = 0; k < fIndex; k++)
+                        if (first[k] != '$')
+                            addFollow(first[k]);
+                }
+
+                else if (next == '\0' && prod[i][0] != c)
+                    FOLLOW(prod[i][0]);
+            }
+        }
+    }
+}
+
+int main() {
+    FILE *fp = fopen("grammar.txt", "r");
+    if (!fp) {
+        printf("File not found\n");
+        return 1;
+    }
+
+    fscanf(fp, "%d", &n);
+    for (int i = 0; i < n; i++)
+        fscanf(fp, "%s", prod[i]);
+
+    fclose(fp);
+
+    printf("\nFIRST:\n");
+    for (int i = 0; i < n; i++) {
+        fIndex = 0;
+        FIRST(prod[i][0]);
+
+        printf("FIRST(%c) = { ", prod[i][0]);
+        for (int j = 0; j < fIndex; j++)
+            printf("%c ", first[j]);
+        printf("}\n");
+    }
+
+    printf("\nFOLLOW:\n");
+    for (int i = 0; i < n; i++) {
+        foIndex = 0;
+        FOLLOW(prod[i][0]);
+
+        printf("FOLLOW(%c) = { ", prod[i][0]);
+        for (int j = 0; j < foIndex; j++)
+            printf("%c ", follow[j]);
+        printf("}\n");
+    }
+
+    return 0;
+}
+
+//////
+
+exp 8....TAC 
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+
+#define MAX 100
+
+char stack[MAX];
+int top = -1;
+
+char tempStack[MAX][10];
+int tTop = -1;
+
+// Stack functions
+void push(char c) {
+    stack[++top] = c;
+}
+
+char pop() {
+    return stack[top--];
+}
+
+// Precedence
+int precedence(char c) {
+    if (c == '+' || c == '-') return 1;
+    if (c == '*' || c == '/') return 2;
+    return 0;
+}
+
+// Infix → Postfix
+void infixToPostfix(char infix[], char postfix[]) {
+    int i, k = 0;
+    char c;
+
+    for (i = 0; infix[i]; i++) {
+        c = infix[i];
+
+        if (isalnum(c)) {
+            postfix[k++] = c;
+        }
+        else if (c == '(') {
+            push(c);
+        }
+        else if (c == ')') {
+            while (stack[top] != '(')
+                postfix[k++] = pop();
+            pop();
+        }
+        else {
+            while (top != -1 && precedence(stack[top]) >= precedence(c))
+                postfix[k++] = pop();
+            push(c);
+        }
+    }
+
+    while (top != -1)
+        postfix[k++] = pop();
+
+    postfix[k] = '\0';
+}
+
+// Generate TAC
+void generateTAC(char postfix[], char resultVar) {
+    int tempCount = 1;
+
+    for (int i = 0; postfix[i]; i++) {
+
+        if (isalnum(postfix[i])) {
+            char op[2] = {postfix[i], '\0'};
+            strcpy(tempStack[++tTop], op);
+        }
+        else {
+            char op2[10], op1[10];
+            strcpy(op2, tempStack[tTop--]);
+            strcpy(op1, tempStack[tTop--]);
+
+            char temp[10];
+            sprintf(temp, "t%d", tempCount++);
+
+            printf("%s = %s %c %s\n", temp, op1, postfix[i], op2);
+
+            strcpy(tempStack[++tTop], temp);
+        }
+    }
+
+    printf("%c = %s\n", resultVar, tempStack[tTop]);
+}
+
+// MAIN
+int main() {
+    char input[MAX], infix[MAX], postfix[MAX];
+    char resultVar;
+
+    printf("Enter expression (e.g., y=a+b*c): ");
+    scanf("%s", input);
+
+    resultVar = input[0];
+    strcpy(infix, input + 2);
+
+    infixToPostfix(infix, postfix);
+
+    printf("\nPostfix: %s\n", postfix);
+
+    printf("\nThree Address Code:\n");
+    generateTAC(postfix, resultVar);
+
+    return 0;
+}
+
