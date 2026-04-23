@@ -1,0 +1,308 @@
+//bfs
+from collections import deque
+
+graph = {
+    'A': ['B', 'C'],
+    'B': ['D', 'E'],
+    'C': ['F'],
+    'D': [],
+    'E': [],
+    'F': []
+}
+
+def bfs(start):
+    visited = set()
+    queue = deque([start])
+
+    while queue:
+        node = queue.popleft()
+        if node not in visited:
+            print(node, end=" ")
+            visited.add(node)
+            queue.extend(graph[node])
+
+bfs('A')
+
+
+
+
+//dfs
+graph = {
+    'A': ['B', 'C'],
+    'B': ['D', 'E'],
+    'C': ['F'],
+    'D': [],
+    'E': [],
+    'F': []
+}
+
+def dfs(node, visited=set()):
+    if node not in visited:
+        print(node, end=" ")
+        visited.add(node)
+        for n in graph[node]:
+            dfs(n, visited)
+
+dfs('A')
+
+
+
+
+//a*
+import heapq
+
+graph = {
+    'A': [('B', 1), ('C', 3)],
+    'B': [('D', 3), ('E', 1)],
+    'C': [('F', 5)],
+    'D': [],
+    'E': [('F', 1)],
+    'F': []
+}
+
+heuristic = {
+    'A': 5,
+    'B': 3,
+    'C': 4,
+    'D': 2,
+    'E': 1,
+    'F': 0
+}
+
+def astar(start, goal):
+    pq = [(0, start)]
+    visited = set()
+
+    while pq:
+        cost, node = heapq.heappop(pq)
+
+        if node == goal:
+            print("Reached:", node)
+            return
+
+        if node not in visited:
+            visited.add(node)
+            for neighbor, weight in graph[node]:
+                total = cost + weight + heuristic[neighbor]
+                heapq.heappush(pq, (total, neighbor))
+
+astar('A', 'F')
+
+
+
+
+//baysian
+# Prior probability
+P_rain = 0.2
+
+# Conditional probabilities
+P_wet_given_rain = 0.9
+P_wet_given_no_rain = 0.1
+
+# Total probability of wet grass
+P_wet = (P_rain * P_wet_given_rain) + ((1 - P_rain) * P_wet_given_no_rain)
+
+# Bayes Theorem: P(Rain | Wet)
+P_rain_given_wet = (P_rain * P_wet_given_rain) / P_wet
+
+print("P(Wet Grass):", P_wet)
+print("P(Rain | Wet Grass):", P_rain_given_wet)
+
+
+
+
+//8-puzzle
+import heapq
+
+goal = [[1,2,3],[4,5,6],[7,8,0]]
+
+def heuristic(state):
+    # count misplaced tiles
+    return sum(state[i][j] != goal[i][j] and state[i][j] != 0
+               for i in range(3) for j in range(3))
+
+def find_zero(state):
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] == 0:
+                return i, j
+
+def get_neighbors(state):
+    x, y = find_zero(state)
+    moves = [(1,0),(-1,0),(0,1),(0,-1)]
+    neighbors = []
+
+    for dx, dy in moves:
+        nx, ny = x+dx, y+dy
+        if 0 <= nx < 3 and 0 <= ny < 3:
+            new = [row[:] for row in state]
+            new[x][y], new[nx][ny] = new[nx][ny], new[x][y]
+            neighbors.append(new)
+    return neighbors
+
+def astar(start):
+    pq = [(heuristic(start), start)]
+    visited = []
+
+    while pq:
+        _, state = heapq.heappop(pq)
+
+        if state == goal:
+            print("Goal reached!")
+            return
+
+        if state not in visited:
+            visited.append(state)
+            for n in get_neighbors(state):
+                heapq.heappush(pq, (heuristic(n), n))
+
+start = [[1,2,3],[4,0,6],[7,5,8]]
+astar(start)
+
+
+
+
+//total order planning
+def total_order_plan():
+    plan = ["Boil Water", "Add Tea", "Add Sugar"]
+
+    print("Total Order Plan:")
+    for step in plan:
+        print(step)
+
+total_order_plan()
+
+//partial order plan
+def partial_order_plan():
+    actions = ["Toast Bread", "Cut Vegetables", "Make Sandwich"]
+
+    constraints = [
+        ("Toast Bread", "Make Sandwich"),
+        ("Cut Vegetables", "Make Sandwich")
+    ]
+
+    print("Partial Order Plan:")
+    for c in constraints:
+        print(c[0], "->", c[1])
+
+partial_order_plan()
+
+
+
+///min max (tic tac toe)
+player, opponent = 'x', 'o'
+
+def isMovesLeft(board):
+    for i in range(3):
+        for j in range(3):
+            if board[i][j] == '_':
+                return True
+    return False
+
+
+def evaluate(b):
+    # Checking rows
+    for row in range(3):
+        if (b[row][0] == b[row][1] and b[row][1] == b[row][2]):
+            if b[row][0] == player:
+                return 10
+            elif b[row][0] == opponent:
+                return -10
+
+    # Checking columns
+    for col in range(3):
+        if (b[0][col] == b[1][col] and b[1][col] == b[2][col]):
+            if b[0][col] == player:
+                return 10
+            elif b[0][col] == opponent:
+                return -10
+
+    # Checking diagonals
+    if (b[0][0] == b[1][1] and b[1][1] == b[2][2]):
+        if b[0][0] == player:
+            return 10
+        elif b[0][0] == opponent:
+            return -10
+
+    if (b[0][2] == b[1][1] and b[1][1] == b[2][0]):
+        if b[0][2] == player:
+            return 10
+        elif b[0][2] == opponent:
+            return -10
+
+    return 0
+
+
+def minimax(board, depth, isMax):
+    score = evaluate(board)
+
+    # If maximizer has won
+    if score == 10:
+        return score
+
+    # If minimizer has won
+    if score == -10:
+        return score
+
+    # If no moves left
+    if not isMovesLeft(board):
+        return 0
+
+    # Maximizer's move
+    if isMax:
+        best = -1000
+
+        for i in range(3):
+            for j in range(3):
+                if board[i][j] == '_':
+                    board[i][j] = player
+                    best = max(best, minimax(board, depth + 1, False))
+                    board[i][j] = '_'
+
+        return best
+
+    # Minimizer's move
+    else:
+        best = 1000
+
+        for i in range(3):
+            for j in range(3):
+                if board[i][j] == '_':
+                    board[i][j] = opponent
+                    best = min(best, minimax(board, depth + 1, True))
+                    board[i][j] = '_'
+
+        return best
+
+
+def findBestMove(board):
+    bestVal = -1000
+    bestMove = (-1, -1)
+
+    for i in range(3):
+        for j in range(3):
+            if board[i][j] == '_':
+                board[i][j] = player
+                moveVal = minimax(board, 0, False)
+                board[i][j] = '_'
+
+                if moveVal > bestVal:
+                    bestMove = (i, j)
+                    bestVal = moveVal
+
+    print("The value of the best Move is:", bestVal)
+    return bestMove
+
+
+# Example board
+board = [
+    ['x', 'o', 'x'],
+    ['o', 'o', 'x'],
+    ['_', '_', '_']
+]
+
+bestMove = findBestMove(board)
+
+print("Best Move is:")
+print("ROW:", bestMove[0], " COL:", bestMove[1])
+
