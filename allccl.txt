@@ -1,0 +1,185 @@
+🔹 Exp 3: IaaS using AWS EC2 (Compute Service)
+
+🎯 Goal:
+
+Launch and use a virtual server (EC2 instance)
+
+✅ Steps:
+Go to AWS Management Console
+Search → EC2
+Click Launch Instance
+Configure:
+Name → MyEC2
+AMI → Amazon Linux (Free tier)
+Instance Type → t2.micro
+Key Pair → Create new (download .pem file ⚠️ important)
+Network:
+Allow SSH (22) and HTTP (80)
+Click Launch Instance
+🔗 Connect to EC2:
+
+Method 1 (Easy):
+
+Select instance → Click Connect → EC2 Instance Connect
+
+Method 2 (Advanced):
+
+ssh -i your-key.pem ec2-user@your-public-ip
+🧪 Test:
+sudo yum update -y
+sudo yum install httpd -y
+sudo systemctl start httpd
+
+Now open browser → paste Public IP
+➡️ You should see Apache webpage ✅
+
+//////////////////////////////////
+
+Exp 4: PaaS using AWS Elastic Beanstalk
+
+🎯 Goal:
+
+Deploy app without managing servers
+
+✅ Steps:
+Go to Elastic Beanstalk
+Click Create Application
+Fill:
+Name → MyApp
+Platform → Node.js / Python (choose any)
+Upload → Sample Application
+Click Create
+
+⏳ Wait 3–5 minutes
+
+🌐 Output:
+You’ll get a URL like:
+http://myapp-env.eba-xxxx.us-east-1.elasticbeanstalk.com
+
+➡️ Open → App running ✅
+
+//////////////////////////////
+
+Exp 5: Storage as a Service (AWS S3)
+
+🎯 Goal:
+
+Store & access files in cloud
+
+✅ Steps:
+Go to S3
+Click Create Bucket
+Name → mybucket12345 (must be unique)
+Region → default
+Disable:
+❌ Block public access (for testing)
+Create bucket
+📤 Upload File:
+Open bucket → Click Upload
+Add file → Upload
+🌐 Make Public:
+Click file → Permissions
+Make it public
+🔗 Access:
+Copy Object URL
+Open in browser ✅
+
+
+/////////////////////
+
+Exp 6: IAM (Identity & Access Management)
+
+🎯 Goal:
+
+Create user & give permissions
+
+✅ Steps:
+Go to IAM
+Click Users → Create User
+Set:
+Name → test-user
+Enable → AWS Console access
+Permissions:
+Attach policy → AmazonS3FullAccess
+Create user
+🔐 Important:
+Download login credentials
+Use them to login as new user
+
+
+/////////////////////////
+
+Exp 7: Database as a Service (AWS RDS)
+
+🎯 Goal:
+
+Create managed database
+
+✅ Steps:
+Go to RDS
+Click Create Database
+Choose:
+Standard Create
+Engine → MySQL
+Template → Free tier
+Set:
+DB name → mydb
+Username → admin
+Password → password123
+Connectivity:
+Public access → YES
+Create DB
+🔗 Connect:
+
+Use:
+
+mysql -h endpoint -u admin -p
+
+////////////////////
+
+Exp 8: Security as a Service (AWS KMS)
+
+🎯 Goal:
+
+Encrypt data using keys
+
+✅ Steps:
+Go to KMS
+Click Create Key
+Choose:
+Symmetric
+Encrypt/Decrypt
+Name → my-key
+Assign permissions → yourself
+Create key
+🧪 Test:
+Use it in S3:
+Upload file → enable encryption → choose KMS key
+
+
+/////////////////////////
+
+expt 9 : docker 
+
+docker --version
+docker search mysql
+
+docker pull ubuntu
+docker pull python
+
+docker images
+
+docker run -it ubuntu
+docker run -it python
+
+docker ps
+docker ps -a
+
+docker stop <container_id>
+
+docker container ls -a
+docker container rm <container_id>
+
+docker build -t my-node-app:1.0 .
+docker run -d -p 3000:3000 my-node-app:1.0
+docker run my-node-app:1.0
