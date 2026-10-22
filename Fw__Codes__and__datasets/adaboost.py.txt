@@ -1,0 +1,77 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from tkinter import Tk, filedialog
+from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# Select CSV dataset
+root = Tk()
+root.withdraw()
+path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
+root.destroy()
+
+if not path:
+    print("No dataset selected!")
+    raise SystemExit
+
+# Load data
+df = pd.read_csv(path)
+print("\nColumns:", list(df.columns))
+target = input("Enter target column: ").strip()
+
+if target not in df.columns:
+    print("Invalid target column!")
+    raise SystemExit
+
+X = df.drop(columns=[target]).select_dtypes(include="number")
+y = df[target]
+
+# Clean data
+X = X.replace([float("inf"), float("-inf")], float("nan"))
+X = X.dropna(axis=1, how="all")
+valid = y.notna()
+X, y = X.loc[valid], y.loc[valid]
+
+if X.shape[1] == 0 or len(X) < 5 or y.nunique() < 2:
+    print("Need numeric features, 5+ rows and 2+ target classes!")
+    raise SystemExit
+
+X = SimpleImputer(strategy="median").fit_transform(X)
+y = LabelEncoder().fit_transform(y.astype(str))
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42,
+    stratify=y if pd.Series(y).value_counts().min() >= 2 else None
+)
+
+# Train AdaBoost
+model = AdaBoostClassifier(
+    estimator=DecisionTreeClassifier(max_depth=1),
+    n_estimators=50,
+    random_state=42
+)
+model.fit(X_train, y_train)
+pred = model.predict(X_test)
+
+# Results
+print("\nAccuracy:", round(accuracy_score(y_test, pred) * 100, 2), "%")
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, pred))
+print("\nClassification Report:\n", classification_report(y_test, pred))
+
+plt.bar(["Correct", "Incorrect"], [
+    (pred == y_test).sum(), (pred != y_test).sum()
+])
+plt.title("AdaBoost Prediction Results")
+plt.ylabel("Number of Samples")
+plt.show()
+
+df.loc[X_test.shape[0]*0:0, :]  # No effect on original dataset
+print("\nAdaBoost completed successfully!")
+
+
+python -m pip install pandas matplotlib scikit-learn

@@ -1,0 +1,79 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import networkx as nx
+from tkinter import Tk, filedialog
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import pairwise_distances
+from networkx.algorithms.community import girvan_newman
+
+# Select CSV dataset
+root = Tk()
+root.withdraw()
+path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
+root.destroy()
+
+if not path:
+    print("No dataset selected!")
+    raise SystemExit
+
+# Load numeric data
+df = pd.read_csv(path)
+X = df.select_dtypes(include="number")
+X = X.replace([float("inf"), float("-inf")], float("nan"))
+X = X.dropna(axis=1, how="all")
+
+if len(X) < 3 or X.shape[1] == 0:
+    print("Need at least 3 rows and numeric columns!")
+    raise SystemExit
+
+X = SimpleImputer(strategy="median").fit_transform(X)
+X = pd.DataFrame(X).loc[:, pd.DataFrame(X).nunique() > 1].values
+
+if X.shape[1] == 0:
+    print("No usable numeric features!")
+    raise SystemExit
+
+X = StandardScaler().fit_transform(X)
+
+# Build similarity graph (limit rows for speed)
+X = X[:min(len(X), 100)]
+dist = pairwise_distances(X)
+G = nx.Graph()
+G.add_nodes_from(range(len(X)))
+
+for i in range(len(X)):
+    nearest = dist[i].argsort()[1:4]
+    for j in nearest:
+        G.add_edge(i, j, weight=1 / (1 + dist[i, j]))
+
+# Divisive clustering using Girvan-Newman
+communities = next(girvan_newman(G))
+clusters = {}
+for c, nodes in enumerate(communities):
+    for node in nodes:
+        clusters[node] = c
+
+print("Number of clusters:", len(communities))
+print("Cluster assignments:", clusters)
+
+# Visualize graph
+pos = nx.spring_layout(G, seed=42)
+colors = [clusters[n] for n in G.nodes()]
+
+nx.draw(
+    G, pos, node_color=colors, with_labels=True,
+    node_size=250, font_size=7
+)
+plt.title("Divisive Graph Clustering (Girvan-Newman)")
+plt.show()
+
+# Save results
+output = df.iloc[:len(X)].copy()
+output["Cluster"] = [clusters[i] for i in range(len(X))]
+output.to_csv("divisive_clustering_output.csv", index=False)
+print("Saved: divisive_clustering_output.csv")
+
+
+
+py -m pip install pandas matplotlib scikit-learn networkx

@@ -1,0 +1,38 @@
+
+from collections import Counter
+
+def gini(labels):
+    total = len(labels)
+    if total == 0:
+        return 0
+
+    counts = Counter(labels)
+    return 1 - sum((count / total) ** 2 for count in counts.values())
+
+# Sample dataset
+data = [
+    ['Sunny', 'No'],
+    ['Sunny', 'No'],
+    ['Rainy', 'Yes'],
+    ['Rainy', 'Yes'],
+    ['Sunny', 'Yes']
+]
+
+# Calculate Gini for target column
+target = [row[1] for row in data]
+print("Gini Index:", round(gini(target), 3))
+
+# Split data by feature
+groups = {}
+for row in data:
+    groups.setdefault(row[0], []).append(row[1])
+
+weighted_gini = sum(
+    len(group) / len(target) * gini(group)
+    for group in groups.values()
+)
+
+print("Weighted Gini after split:", round(weighted_gini, 3))
+print("Gini Gain:", round(gini(target) - weighted_gini, 3))
+
+python -m pip install pandas matplotlib scikit-learn
